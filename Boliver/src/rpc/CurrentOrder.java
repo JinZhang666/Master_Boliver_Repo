@@ -18,18 +18,17 @@ import entity.BearerToken;
 import entity.Order;
 import oAuth.CreateAndVerify;
 
-
 /**
- * Servlet implementation class OrderHistory
+ * Servlet implementation class CurrentOrder
  */
-@WebServlet("/orderhistory")
-public class OrderHistory extends HttpServlet {
+@WebServlet("/currentorder")
+public class CurrentOrder extends HttpServlet {
 	private static final long serialVersionUID = 1L;
        
     /**
      * @see HttpServlet#HttpServlet()
      */
-    public OrderHistory() {
+    public CurrentOrder() {
         super();
         // TODO Auto-generated constructor stub
     }
@@ -42,13 +41,13 @@ public class OrderHistory extends HttpServlet {
 		// Get token from request
 		String token = BearerToken.getBearerToken(request);
 		
-		if(token != null && CreateAndVerify.isTokenValid(token, request.getRemoteAddr())) {
-			DBConnection conn = DBConnectionFactory.getConnection();
+		if(token != null && CreateAndVerify.isTokenValid(token, request.getRemoteAddr())) { // <---- verify token and ipAddr
+			DBConnection conn = DBConnectionFactory.getConnection();       // <---- connect to db, and fullfill client's request
 			try {
 				JSONObject input = RpcHelper.readJSONObject(request);
 				String userId = input.getString("user_id");
 				JSONArray array = new JSONArray();
-				Set<Order> orders = conn.getHistoryOrders(userId, null, null);
+				Set<Order> orders = conn.getCurrentOrders(userId);
 				for (Order order : orders) {
 					JSONObject obj = order.toJSONObject();
 					array.put(obj);

@@ -6,9 +6,13 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+//import javax.servlet.http.HttpSession;
 
 import org.json.JSONObject;
+
+import db.DBConnection;
+import db.DBConnectionFactory;
+import entity.BearerToken;
 
 
 /**
@@ -30,13 +34,26 @@ public class Logout extends HttpServlet {
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		HttpSession session = request.getSession(false);
-		if(session != null) {
-			session.invalidate();
-		}
+		
+		/**
+		 * get token, if it is sent over, 
+		 * add the token to the blacklist to simulate an user-initiated-action of invalidating the token 
+		 */
+		
 		try {
 			JSONObject obj = new JSONObject();
-			obj.put("status", "you have successfully logged out");
+			String token = BearerToken.getBearerToken(request);
+	        if (token != null) {
+	            DBConnection connection = DBConnectionFactory.getConnection();
+	            if(connection.addToBlackList(token)) {
+	            	obj.put("status", "you have successfully logged out and your token has been trashed");
+	            } else {
+	            	obj.put("status", "I tried to invalidate your token, but I failed");
+	            }	            
+	        } else {
+	        	obj.put("status", "I did not receive your token, did you clear your cache?");
+	        }
+			
 			RpcHelper.writeJsonObject(response, obj);
 		} catch (Exception e){
 			e.printStackTrace();

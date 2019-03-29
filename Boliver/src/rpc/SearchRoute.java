@@ -1,7 +1,6 @@
 package rpc;
 
 import java.io.IOException;
-import java.util.Set;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -9,63 +8,55 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
-import db.DBConnection;
-import db.DBConnectionFactory;
 import entity.BearerToken;
-import entity.Order;
 import oAuth.CreateAndVerify;
-
+import recommendation.Routes;
 
 /**
- * Servlet implementation class OrderHistory
+ * Servlet implementation class SearchRoute
  */
-@WebServlet("/orderhistory")
-public class OrderHistory extends HttpServlet {
+@WebServlet("/searchroute")
+public class SearchRoute extends HttpServlet {
 	private static final long serialVersionUID = 1L;
-       
-    /**
-     * @see HttpServlet#HttpServlet()
-     */
-    public OrderHistory() {
-        super();
-        // TODO Auto-generated constructor stub
-    }
 
 	/**
-	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
+	 * @see HttpServlet#HttpServlet()
+	 */
+	public SearchRoute() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+
+	/**
+	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse
+	 *      response)
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		
 		// Get token from request
 		String token = BearerToken.getBearerToken(request);
-		
 		if(token != null && CreateAndVerify.isTokenValid(token, request.getRemoteAddr())) {
-			DBConnection conn = DBConnectionFactory.getConnection();
+			
+			JSONObject input = RpcHelper.readJSONObject(request);
 			try {
-				JSONObject input = RpcHelper.readJSONObject(request);
-				String userId = input.getString("user_id");
-				JSONArray array = new JSONArray();
-				Set<Order> orders = conn.getHistoryOrders(userId, null, null);
-				for (Order order : orders) {
-					JSONObject obj = order.toJSONObject();
-					array.put(obj);
-				}
+				// Get origin and destination from request
+				String origin = input.getString("origin");
+				String dest = input.getString("destination");
 				
-				RpcHelper.writeJsonArray(response, array);
+				JSONObject result = Routes.calculateRoutes(origin, dest);
+				
+				RpcHelper.writeJsonObject(response, result);
+				
 			} catch (Exception e) {
 				e.printStackTrace();
-			} finally {
-				conn.close();
 			}
 		} else {  // if your token is invalid,
 			JSONObject obj = new JSONObject();
 			obj.put("status", "are you trying to gain illegal access? Where is your token?");
 			RpcHelper.writeJsonObject(response, obj);
 		}
-		
+	
 	}
 
 }

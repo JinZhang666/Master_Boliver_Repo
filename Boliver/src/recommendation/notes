@@ -1,0 +1,20 @@
+submitOrder(robotType, baseAddress, origin, destination) {
+    find and assign robot()
+	new CurrentOrder()
+	update robotStatus()
+	return message telling user that his/her order has been submitted/created
+}
+
+moveOrder(orderId, newOrderStatus){ <-- this implements both cancelOrder and confirmOrder
+    update robot status
+    send robot back to closest base
+    update order status
+    move order from currentOrder to orderHistory
+}
+
+
+TODO:
+
+3.1 list all implemented business logic
+3.2 create some test cases to demostrate backend logic
+3.3 write design doc

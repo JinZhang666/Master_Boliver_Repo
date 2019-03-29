@@ -1,17 +1,20 @@
 package rpc;
 
 import java.io.IOException;
+import java.util.Calendar;
+
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import org.json.JSONObject;
 
 import db.DBConnection;
 import db.DBConnectionFactory;
+import entity.BearerToken;
+import oAuth.CreateAndVerify;
 
 /**
  * Servlet implementation class Login
@@ -32,57 +35,55 @@ public class Login extends HttpServlet {
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		DBConnection connection = DBConnectionFactory.getConnection();
 		try {
-			HttpSession session = request.getSession(false);
+			String jwt = BearerToken.getBearerToken(request);
+			String ipAddr = request.getRemoteAddr();
 			JSONObject obj = new JSONObject();
 			
-			if(session != null) {
-				String username = session.getAttribute("username").toString();
-				String sessionId = session.getId();
-				int sessionInterval = session.getMaxInactiveInterval();
-				obj.put("status", "Oh, there is your session. Here, take it and please take care of it")
-				   .put("sessionId", sessionId)
-				   .put("username", username)
-				   .put("your session lasts for in seconds", sessionInterval);
-			} else {
-				response.setStatus(403);
-				obj.put("status", "Where is your session? I must have misplaced it...");
+			if(CreateAndVerify.isTokenValid(jwt, ipAddr)) {
+				obj.put("wooo", "your token is still valid");
+			}else {
+				obj.put("invalid token","you cant use this one, try log in again for a new token");
 			}
+			
 			RpcHelper.writeJsonObject(response, obj);
-		} catch(Exception e) {
+			
+		} catch (Exception e) {
 			e.printStackTrace();
-		} finally {
-			connection.close();
 		}
+		
 	}
 
 	/**
 	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		
 		DBConnection connection = DBConnectionFactory.getConnection();
-	   	 try {
-	   		 JSONObject input = RpcHelper.readJSONObject(request);
+		JSONObject obj = new JSONObject();
+		
+		try  {
+			JSONObject input = RpcHelper.readJSONObject(request);
 	   		 String username = input.getString("username");
 	   		 String password = input.getString("password");
 	   		 
-	   		 JSONObject obj = new JSONObject();
 	   		 if(connection.verifyLogin(username, password)) {
-	   			 HttpSession session = request.getSession();
-	   			 session.setAttribute("username", username);
-	   			 session.setMaxInactiveInterval(600);
-	   			 obj.put("status", "wooooo login successfully!").put("username", username);
-	   		 }else {
-	   			 response.setStatus(401);
-	   			 obj.put("status", "User Doesn't exist");
+	   			Calendar cal = Calendar.getInstance();
+	   			cal.add(Calendar.SECOND, 3600000);
+	   			String token = CreateAndVerify.createToken(request.getRemoteAddr(), cal.getTimeInMillis());			
+				//System.out.println("token::"+token);
+				obj.put("access_token", token);					
 	   		 }
+	   		 else {
+	   			response.setStatus(401);
+	   			obj.put("status", "Apparently, your username either doesnt exist or your password is wrong");
+	   		 }
+	   		 
 	   		RpcHelper.writeJsonObject(response, obj);
-	   	 } catch (Exception e) {
-	   		 e.printStackTrace();
-	   	 } finally {
-	   		 connection.close();
-	   	 }
+	   		
+		} catch ( Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 }
